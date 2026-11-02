@@ -1,0 +1,15 @@
+
+# Python 임시 파일
+__pycache__/
+*.pyc
+.venv/
+
+# 센서 기록 및 혼잡 상태
+sensor_history.jsonl
+zone_status.json
+
+# 개인 설정 및 비밀번호
+.env
+.env.*
+secrets.py
+wifi_config.py
