@@ -1,0 +1,5 @@
+# 형진이 프로젝트 src/main/resources/application.properties 에 추가
+server.port=5001
+# FastAPI 서버(수경)가 돌아가는 노트북 IP. 같은 노트북이면 127.0.0.1
+fastapi.host=127.0.0.1
+fastapi.link-port=5002
