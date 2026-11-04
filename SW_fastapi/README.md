@@ -18,6 +18,13 @@
 | `static/mobile.html` | 시연 | 관객 화면 (모바일) |
 | `test_*.py` | 수경, 시연 | 테스트용 (가짜 AI, 가짜 ESP32 등) |
 
+## 전체 프로젝트 구성
+| 폴더 | 담당 | 내용 |
+| --- | --- | --- |
+| `ESP32/` | 수경 | ESP32 MicroPython: ToF 이동 감지, LCD/LED 출력, FastAPI와 WebSocket 통신 |
+| `SW_fastapi/` | 수경, 시연 | FastAPI 서버 (이 폴더, 아래 표 참고) |
+| `crowd-server/` | 형진 (+시연 통신·화면) | 코틀린 Spring Boot 웹 서버 (:5001). FastAPI와 TCP 연결, 관리자·관객 화면 제공 |
+
 ## 실행
 ```
 python -m pip install "fastapi[standard]" opencv-python
