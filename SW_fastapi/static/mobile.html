@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>지금 구역별 혼잡도</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  /* 기본 라이트, 버튼으로 다크 전환 */
+  :root{
+    --bg:#F4F5F7; --panel:#FFFFFF; --panel2:#F2F4F6; --line:#E4E7EB;
+    --ink:#121519; --muted:#5F6A75; --dim:#98A1AA;
+    --ok:#0FA060; --warn:#D48A00; --bad:#E5483B;
+    --font:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  }
+  :root[data-theme="dark"]{
+    --bg:#0B0D10; --panel:#14171B; --panel2:#1A1E23; --line:#262C33;
+    --ink:#ECEFF2; --muted:#8B95A0; --dim:#5C6670;
+    --ok:#3DDC97; --warn:#FFC24B; --bad:#FF5D5D; color-scheme:dark;
+  }
+  .tbtn{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:999px;padding:5px 10px;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+  .right{display:flex;align-items:center;gap:10px}
+  *{box-sizing:border-box}
+  html,body{background:var(--bg)}
+  body{margin:0;color:var(--ink);font-family:var(--font);letter-spacing:-.01em;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:460px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top,0px)) 18px 28px;display:flex;flex-direction:column;gap:16px}
+  .hd{display:flex;justify-content:space-between;align-items:center}
+  .hd h1{margin:0;font-size:20px;font-weight:700}
+  .live{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--muted)}
+  .live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok);animation:b 1.6s infinite}
+  .live.off::before{background:var(--bad);box-shadow:none}
+  @keyframes b{50%{opacity:.3}}
+
+  .rec{border-radius:20px;padding:22px 20px;background:radial-gradient(120% 140% at 0% 0%,color-mix(in srgb,var(--rc) 30%,var(--panel)) 0%,var(--panel) 60%);border:1px solid color-mix(in srgb,var(--rc) 35%,var(--line))}
+  .rec small{color:var(--muted);font-size:13px;font-weight:600}
+  .rec .big{display:flex;align-items:baseline;gap:8px;margin:6px 0 8px}
+  .rec .big b{font-size:56px;font-weight:800;line-height:1;color:var(--rc)}
+  .rec .big span{font-size:22px;font-weight:700}
+  .rec p{margin:0;color:var(--muted);font-size:15px;line-height:1.5}
+
+  .map{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:16px}
+  .stage{height:26px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);display:grid;place-items:center;font-size:11px;font-weight:700;letter-spacing:.3em;color:var(--dim);margin-bottom:10px}
+  .zones{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .z{position:relative;border-radius:14px;padding:14px 10px 12px;min-height:128px;display:flex;flex-direction:column;justify-content:space-between;background:color-mix(in srgb,var(--c) 12%,var(--panel2));border:1px solid color-mix(in srgb,var(--c) 45%,var(--line));transition:all .35s;overflow:hidden}
+  .z b{font-size:24px;font-weight:800}
+  .z .st{font-size:14px;font-weight:700;color:var(--c)}
+  .z .fill{position:absolute;left:0;right:0;bottom:0;background:var(--c);opacity:.14;transition:height .5s}
+  .z.best{box-shadow:0 0 0 2px var(--ok),0 0 24px color-mix(in srgb,var(--ok) 35%,transparent)}
+  .z.closed{background:repeating-linear-gradient(45deg,rgba(255,93,93,.10) 0 8px,transparent 8px 16px),var(--panel2);border-color:var(--bad)}
+  .legend{display:flex;gap:14px;justify-content:center;margin-top:12px;font-size:12px;color:var(--muted)}
+  .legend span{display:inline-flex;align-items:center;gap:5px}
+  .legend i{width:8px;height:8px;border-radius:50%}
+  .foot{text-align:center;color:var(--dim);font-size:12px}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd"><h1>지금 공연장 혼잡도</h1><span class="right"><span class="live" id="live">실시간</span><button class="tbtn" type="button" id="themeBtn">다크</button></span></div>
+
+  <div class="rec" id="rec" style="--rc:var(--ok)">
+    <small>지금 가장 여유로운 곳</small>
+    <div class="big"><b id="recZone">-</b><span id="recWord">구역</span></div>
+    <p id="recMsg">불러오는 중...</p>
+  </div>
+
+  <div class="map">
+    <div class="stage">STAGE</div>
+    <div class="zones" id="zones"></div>
+    <div class="legend">
+      <span><i style="background:var(--ok)"></i>여유</span>
+      <span><i style="background:var(--warn)"></i>붐빔</span>
+      <span><i style="background:var(--bad)"></i>혼잡</span>
+    </div>
+  </div>
+
+  <div class="foot" id="foot">-</div>
+</div>
+<script>
+  const KO = {normal:"여유", caution:"붐빔", crowded:"혼잡"};
+  const COLOR = {normal:"var(--ok)", caution:"var(--warn)", crowded:"var(--bad)"};
+  const $ = id => document.getElementById(id);
+  const two = n => String(n).padStart(2, "0");
+
+  // 라이트/다크 전환 (선택은 이 브라우저에 기억)
+  function setTheme(t) {
+    if (t === "dark") document.documentElement.dataset.theme = "dark";
+    else delete document.documentElement.dataset.theme;
+    const b = document.getElementById("themeBtn");
+    if (b) b.textContent = t === "dark" ? "라이트" : "다크";
+    try { localStorage.setItem("theme", t); } catch (e) {}
+  }
+  let saved = "light"; try { saved = localStorage.getItem("theme") || "light"; } catch (e) {}
+  setTheme(saved);
+  document.getElementById("themeBtn").onclick = () =>
+    setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+
+  function render(d) {
+    const w = d.worst && d.zones.find(z => z.id === d.worst);
+    const closed = d.control.restricted;
+    if (d.recommend) {
+      $("rec").style.setProperty("--rc", "var(--ok)");
+      $("recZone").textContent = d.recommend; $("recWord").textContent = "구역";
+      $("recMsg").textContent = w
+        ? `${w.id}구역이 ${w.level === "crowded" ? "혼잡해요" : "붐비기 시작했어요"}. ${d.recommend}구역으로 이동해 주세요.`
+        : closed.length ? `${closed.join("·")}구역은 지금 입장할 수 없어요. ${d.recommend}구역을 이용해 주세요.`
+        : "모든 구역이 여유로워요. 편한 곳에서 관람하세요.";
+    } else {
+      $("rec").style.setProperty("--rc", "var(--bad)");
+      $("recZone").textContent = "대기"; $("recWord").textContent = "";
+      $("recMsg").textContent = "모든 구역이 붐비고 있어요. 안내 요원의 안내를 따라 주세요.";
+    }
+    $("zones").innerHTML = d.zones.map(z => {
+      const cls = ["z"]; if (z.restricted) cls.push("closed"); if (z.id === d.recommend) cls.push("best");
+      return `<div class="${cls.join(" ")}" style="--c:${z.restricted ? "var(--bad)" : COLOR[z.level]}">
+        <div class="fill" style="height:${Math.min(100, z.count / z.capacity * 100)}%"></div>
+        <b>${z.id}</b><span class="st">${z.restricted ? "입장 제한" : KO[z.level]}</span>
+      </div>`;
+    }).join("");
+    const t = new Date(d.ts * 1000);
+    $("foot").textContent = `마지막 갱신 ${two(t.getHours())}:${two(t.getMinutes())}:${two(t.getSeconds())} · 자동으로 바뀌어요`;
+  }
+
+  // WebSocket이 없는 서버(코틀린 Spring)면 1초마다 /api/status를 읽는다
+  let polling = false;
+  function startPolling() {
+    if (polling) return; polling = true;
+    const tick = async () => {
+      try {
+        const r = await fetch("/api/status");
+        if (r.ok) { render(await r.json()); $("live").className = "live"; $("live").textContent = "실시간"; }
+        else { $("live").className = "live off"; $("live").textContent = "연결 대기"; }
+      } catch (e) { $("live").className = "live off"; $("live").textContent = "다시 연결 중"; }
+    };
+    tick(); setInterval(tick, 1000);
+  }
+
+  function connect() {
+    let opened = false;
+    const ws = new WebSocket(`ws://${location.host}/ws/status`);
+    ws.onopen = () => { opened = true; $("live").className = "live"; $("live").textContent = "실시간"; };
+    ws.onmessage = e => render(JSON.parse(e.data));
+    ws.onclose = () => {
+      if (!opened) { startPolling(); return; } $("live").className = "live off"; $("live").textContent = "다시 연결 중"; setTimeout(connect, 3000); };
+  }
+  connect();
+</script>
+</body>
+</html>
