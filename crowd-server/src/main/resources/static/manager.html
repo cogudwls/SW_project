@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>혼잡 관리 · 관리자</title>
+<title>관리자용 화면</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
 <style>
@@ -285,6 +285,15 @@
       <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>`;
   }
 
+  const LIMIT = 15;
+
+  function isRestricted(z) {
+    return z.restricted || (
+      z.count_known !== false &&
+      Number(z.count) >= LIMIT
+    );
+  }
+  
   function render(d) {
     last = d;
     // 상단 칩
@@ -309,9 +318,9 @@
     // 평면도
     for (const z of d.zones) {
       const el = $("f-" + z.id);
-      el.style.setProperty("--c", z.restricted ? "var(--bad)" : COLOR[z.level]);
-      el.classList.toggle("restricted", z.restricted);
-      el.querySelector(".tag").textContent = z.restricted ? "입장 제한" : KO[z.level];
+      el.style.setProperty("--c", isRestricted(z) ? "var(--bad)" : COLOR[z.level]);
+      el.classList.toggle("restricted", isRestricted(z));
+      el.querySelector(".tag").textContent = isRestricted(z) ? "입장 제한" : KO[z.level];
       el.querySelector(".cnt").innerHTML = `${z.count_known === false ? "–" : z.count}<small> / ${z.capacity}</small>`;
       el.querySelector(".dots").innerHTML = Array.from({length: Math.max(z.capacity, z.count)}, (_, i) => i < z.count ? "<i></i>" : '<i class="empty"></i>').join("");
     }
@@ -326,8 +335,8 @@
     $("zones").innerHTML = d.zones.map(z => {
       const f = z.flow_30s;
       const ft = f > 0 ? `+${f} 유입` : f < 0 ? `${f} 유출` : "변화 없음";
-      return `<section class="panel zc" style="--c:${z.restricted ? "var(--bad)" : COLOR[z.level]}">
-        <div class="row"><b>${z.id}구역</b><span class="tag">${z.restricted ? "입장 제한" : KO[z.level]}</span></div>
+      return `<section class="panel zc" style="--c:${isRestricted(z) ? "var(--bad)" : COLOR[z.level]}">
+        <div class="row"><b>${z.id}구역</b><span class="tag">${isRestricted(z) ? "입장 제한" : KO[z.level]}</span></div>
         <div class="big">${z.count_known === false ? "–" : z.count}<small> / ${z.capacity}명</small></div>
         <div class="meter"><i style="width:${Math.min(100, z.count / z.capacity * 100)}%"></i></div>
         <div class="kv"><span>30초 흐름</span><b>${ft}</b></div>

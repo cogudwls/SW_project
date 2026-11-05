@@ -13,11 +13,11 @@ import tools.jackson.databind.node.ObjectNode
 @Controller
 class PageController {
 
-    @GetMapping("/admin")
-    fun admin(): String = "forward:/admin.html"
+    @GetMapping("/manager")
+    fun manager(): String = "forward:/manager.html"
 
     @GetMapping("/m")
-    fun mobile(): String = "forward:/mobile.html"
+    fun audience(): String = "forward:/audience.html"
 }
 
 @RestController
