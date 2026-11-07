@@ -1,4 +1,3 @@
-
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -129,6 +128,7 @@ def get_sensor_history():
 class ZoneStatus(BaseModel):
     zone: Literal["A", "B", "C"]
     status: Literal["NORMAL", "CAUTION", "CROWDED"]
+    count: Optional[int] = None   # [시연 추가] 구역 인원 (AI가 알려주면 웹 화면에 표시)
 
 
 # LCD / LED 제어 명령 생성
@@ -140,6 +140,22 @@ def make_display_command(zone, status):
         "lcd_message": f"{zone} ZONE {status}",
         "led_pattern": status
     }
+
+
+# [시연 추가] 코틀린 웹 서버와 TCP 서버 간 통신(5002) + 백업용 웹 화면(/admin, /m)
+from dashboard_bridge import WebBridge
+
+bridge = WebBridge(
+    app, zone_status, esp32_clients, save_zone_status,
+    make_display_command, HISTORY_FILE
+)
+
+# [시연 추가] 웹캠으로 빨간 점 세기 → 구역별 인원 → 혼잡 판단 → ESP32/웹 화면
+# 웹캠이 없거나 테스트할 때는 False로 바꾸기
+USE_CAMERA = True
+if USE_CAMERA:
+    from red_dot_counter import start_vision
+    start_vision(bridge.set_counts)
 
 
 # =====================================
@@ -212,6 +228,7 @@ async def update_zone_status(data: ZoneStatus):
 
     # 변경된 상태 저장
     save_zone_status()
+    bridge.note_status(data.zone, data.status, data.count)   # [시연 추가]
 
     # LCD / LED 명령 생성
     command = make_display_command(
@@ -287,6 +304,7 @@ async def esp32_socket(websocket: WebSocket):
 
             # 정상 센서 데이터 기록
             save_sensor_history(sensor_data)
+            bridge.on_pass(sensor_data)   # [시연 추가] 이동 기록 (30초 유입 계산, 화면 표시)
 
             # 현재 혼잡 상태 확인 후 명령 전송
             await websocket.send_json(
@@ -301,3 +319,9 @@ async def esp32_socket(websocket: WebSocket):
 
     finally:
         esp32_clients.discard(websocket)
+
+
+# [시연 추가] python main.py 로도 실행 가능
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=5000)
